@@ -96,35 +96,27 @@ function actionPage(){
     const search = document.querySelector('.search-wrapper_input');
     const searchBtn = document.querySelector('.search-btn');
 
-    // checkbox 
-    discountCheckbox.addEventListener('click', () => {
-        cards.forEach((card) => {
-            if (discountCheckbox.checked){
-                if (!card.querySelector('.card-sale')){
-                    card.parentNode.style.display = 'none';
-                }
-            } else {
-                card.parentNode.style.display = '';
-            }
-        });
-    });
 
-    // Фильтр по цене
-    function filterPrice(){
+    function filter(){
         cards.forEach((card) => {
             const cardPrice = card.querySelector('.card-price');
             const price = parseFloat(cardPrice.textContent);
-            
+            const discount = card.querySelector('.card-sale');
+
             if ((min.value && price < min.value) || (price > max.value  && max.value)){
+                card.parentNode.style.display = 'none';
+            } else if (discountCheckbox.checked && !discount){
                 card.parentNode.style.display = 'none';
             } else {
                 card.parentNode.style.display = '';
             }
-        })
+        });
     }
 
-    min.addEventListener('change', filterPrice);
-    max.addEventListener('change', filterPrice);
+
+    discountCheckbox.addEventListener('click', filter);
+    min.addEventListener('change', filter);
+    max.addEventListener('change', filter);
 
     // поиск
     searchBtn.addEventListener('click', () => {
@@ -141,9 +133,61 @@ function actionPage(){
     });
 }
 
-addCart();
-toggleCheckBox();
-toggleCart();
-actionPage();
+// Получение данных с сервера
+function getData(){
+    const goodsWrapper = document.querySelector('.goods');
+
+    return fetch('../db/db.json')
+        .then((response) => {
+            if (response.ok){
+                return response.json();
+            } else {
+                throw new Error ('Данные не были получены, ошибка: ' + response.status)
+            }
+        })
+        .then((data) => {
+            return data;
+        })
+        .catch((err) => {
+            console.error(err);
+            goodsWrapper.innerHTML = '<div style="color: red; font-size: 30px;">Упс, что-то пошло не так! :(</div>';
+        });
+}
+// end Получение данных с сервера
+
+// Выводим карточки товаров
+function renderCards(data){
+    const goodsWrapper = document.querySelector('.goods');
+
+    data.goods.forEach((good) => {
+        const card = document.createElement('div');
+        card.className = 'col-12 col-md-6 col-lg-4 col-xl-3';
+        card.innerHTML = `
+            <div class="card">
+                ${ good.sale ? '<div class="card-sale">🔥Hot Sale🔥</div>' : '' }
+                <div class="card-img-wrapper">
+                    <span class="card-img-top"
+                        style="background-image: url('${good.img}')"></span>
+                </div>
+                <div class="card-body justify-content-between">
+                    <div class="card-price" style="${ good.sale ? 'color: red;' : ''}">${good.price} ₽</div>
+                    <h5 class="card-title">${good.title}</h5>
+                    <button class="btn btn-primary">В корзину</button>
+                </div>
+            </div>
+        `;
+        goodsWrapper.appendChild(card);
+    });
+}
+
+getData().then((data) => {
+    renderCards(data);
+    toggleCheckBox();
+    actionPage();
+
+    addCart();
+    toggleCart();
+});
+
 
 console.log("dev");
